@@ -1,0 +1,381 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "logicAppName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "metadata": {
+        "description": "Name of the Logic App."
+      }
+    },
+    "logicAppLocation": {
+      "type": "string",
+      "defaultValue": "westeurope",
+      "allowedValues": [
+        "[resourceGroup().location]",
+        "eastasia",
+        "southeastasia",
+        "centralus",
+        "eastus",
+        "eastus2",
+        "westus",
+        "northcentralus",
+        "southcentralus",
+        "northeurope",
+        "westeurope",
+        "japanwest",
+        "japaneast",
+        "brazilsouth",
+        "australiaeast",
+        "australiasoutheast",
+        "southindia",
+        "centralindia",
+        "westindia",
+        "canadacentral",
+        "canadaeast",
+        "uksouth",
+        "ukwest",
+        "westcentralus",
+        "westus2"
+      ],
+      "metadata": {
+        "description": "Location of the Logic App."
+      }
+    },
+    "Dynamics365_F&O_instance": {
+      "type": "string",
+      "defaultValue": "yourappaos.cloudax.dynamics.com"
+    },
+    "Exception_email_id": {
+      "type": "string",
+      "defaultValue": "user@tenant.com"
+    },
+    "Policy_retry_count": {
+      "type": "int",
+      "defaultValue": 10
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "name": "[parameters('logicAppName')]",
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2017-07-01",
+      "location": "[parameters('logicAppLocation')]",
+      "tags": {
+        "displayName": "LogicApp"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/connections', 'office365')]"
+      ],
+      "properties": {
+        "parameters": {
+          "$connections": {
+            "value": {
+              "dynamicsax_1": {
+                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'dynamicsax')]",
+                "connectionId": "/subscriptions/fb40671f-c2d5-40a5-ae34-ae655ba58cc7/resourceGroups/azured365labs/providers/Microsoft.Web/connections/dynamicsax-2",
+                "connectionName": "dynamicsax-2"
+              },
+              "office365": {
+                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'office365')]",
+                "connectionId": "[resourceId('Microsoft.Web/connections', 'office365')]",
+                "connectionName": "office365"
+              }
+            }
+          }
+        },
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "actions": {
+            "Check_status_until_import_is_complete": {
+              "type": "Until",
+              "expression": "@contains(body('GetExecustionSummaryStatus')?['value'], 'Succeeded')",
+              "limit": {
+                "count": "@parameters('retry_policy_count')",
+                "timeout": "PT1M"
+              },
+              "actions": {
+                "Delay": {
+                  "type": "Wait",
+                  "inputs": {
+                    "interval": {
+                      "count": 10,
+                      "unit": "Second"
+                    }
+                  },
+                  "runAfter": {}
+                },
+                "GetExecustionSummaryStatus": {
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['dynamicsax_1']['connectionId']"
+                      }
+                    },
+                    "method": "post",
+                    "body": {
+                      "executionId": "@body('ImportFromPackage')?['OutputParameters']?['value']"
+                    },
+                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent('uctechdev310ddcbc8ffa04343devaos.cloudax.dynamics.com'))}/procedures/@{encodeURIComponent(encodeURIComponent('DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetExecutionSummaryStatus'))}"
+                  },
+                  "runAfter": {
+                    "Delay": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "InitiatePackageImporttoD365": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "GetBlobPackage": {
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "@triggerBody()?['bloburl']",
+                "headers": {
+                  "content-type": "application/octet-stream"
+                }
+              },
+              "runAfter": {}
+            },
+            "Handle_exceptions": {
+              "type": "Scope",
+              "actions": {
+                "Send_an_email": {
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['office365']['connectionId']"
+                      }
+                    },
+                    "method": "post",
+                    "body": {
+                      "To": "@parameters('exception_email_id')",
+                      "Subject": "Exception has occurred while processing file @triggerbody()?['Name']}",
+                      "Body": "Exception has occurred while processing file @{triggerBody()?['filename']}"
+                    },
+                    "path": "/Mail"
+                  },
+                  "runAfter": {}
+                }
+              },
+              "runAfter": {
+                "Check_status_until_import_is_complete": [
+                  "Succeeded"
+                ],
+                "Handle_execution_result": [
+                  "Failed",
+                  "Skipped",
+                  "TimedOut"
+                ],
+                "InitiatePackageImporttoD365": [
+                  "Succeeded"
+                ],
+                "UploadPackageToD365Storage": [
+                  "Failed",
+                  "Skipped",
+                  "TimedOut"
+                ]
+              }
+            },
+            "Handle_execution_result": {
+              "type": "Scope",
+              "actions": {
+                "Handle_result_of_execution": {
+                  "type": "If",
+                  "expression": "@equals(body('GetExecustionSummaryStatus')?['value'], 'Succeeded')",
+                  "actions": {
+                    "Handle_success": {
+                      "type": "Scope",
+                      "actions": {},
+                      "runAfter": {}
+                    }
+                  },
+                  "runAfter": {},
+                  "else": {
+                    "actions": {
+                      "Handle_error": {
+                        "type": "Scope",
+                        "actions": {},
+                        "runAfter": {}
+                      }
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Check_status_until_import_is_complete": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "InitiatePackageImporttoD365": {
+              "type": "Until",
+              "expression": "@equals(actions('ImportFromPackage').Status, 'Succeeded')",
+              "limit": {
+                "count": "@parameters('retry_policy_count')",
+                "timeout": "PT1M"
+              },
+              "actions": {
+                "ImportFromPackage": {
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['dynamicsax_1']['connectionId']"
+                      }
+                    },
+                    "method": "post",
+                    "body": {
+                      "packageUrl": "@{json(body('GetAzureWritableUrl')?['value']).BlobUrl}",
+                      "definitionGroupId": "RimiliaImport",
+                      "execute": true,
+                      "overwrite": true,
+                      "legalEntityId": "@triggerBody()?['company']"
+                    },
+                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent('uctechdev310ddcbc8ffa04343devaos.cloudax.dynamics.com'))}/procedures/@{encodeURIComponent(encodeURIComponent('DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.ImportFromPackage'))}"
+                  },
+                  "runAfter": {}
+                }
+              },
+              "runAfter": {
+                "UploadPackageToD365Storage": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Until": {
+              "type": "Until",
+              "expression": "@equals(actions('GetAzureWritableUrl').status, 'Succeeded')",
+              "limit": {
+                "count": 60,
+                "timeout": "PT1H"
+              },
+              "actions": {
+                "GetAzureWritableUrl": {
+                  "type": "ApiConnection",
+                  "inputs": {
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['dynamicsax_1']['connectionId']"
+                      }
+                    },
+                    "method": "post",
+                    "body": {
+                      "uniqueFileName": "@{triggerBody()?['filename']}_@{outputs('GetBlobPackage')['headers']['x-ms-request-id']}.zip"
+                    },
+                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent('uctechdev310ddcbc8ffa04343devaos.cloudax.dynamics.com'))}/procedures/@{encodeURIComponent(encodeURIComponent('DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetAzureWriteUrl'))}"
+                  },
+                  "runAfter": {}
+                }
+              },
+              "runAfter": {
+                "GetBlobPackage": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "UploadPackageToD365Storage": {
+              "type": "Http",
+              "inputs": {
+                "method": "PUT",
+                "uri": "@{json(body('GetAzureWritableUrl')?['value']).BlobUrl}",
+                "headers": {
+                  "Content-Type": "application/octet-stream",
+                  "x-ms-blob-type": "BlockBlob",
+                  "x-ms-version": "2015-02-21",
+                  "�x-ms-date": "@{utcnow('R')}"
+                },
+                "body": "@body('GetBlobPackage')"
+              },
+              "runAfter": {
+                "Until": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "parameters": {
+            "$connections": {
+              "defaultValue": {},
+              "type": "Object"
+            },
+            "dynamicsax_instance": {
+              "defaultValue": "[parameters('Dynamics365_F&O_instance')]",
+              "type": "String"
+            },
+            "exception_email_id": {
+              "defaultValue": "[parameters('Exception_email_id')]",
+              "type": "String"
+            },
+            "retry_policy_count": {
+              "defaultValue": "[parameters('Policy_retry_count')]",
+              "type": "Int"
+            }
+          },
+          "triggers": {
+            "manual": {
+              "type": "Request",
+              "kind": "Http",
+              "inputs": {
+                "schema": {
+                  "properties": {
+                    "bloburl": {
+                      "type": "string"
+                    },
+                    "company": {
+                      "type": "string"
+                    },
+                    "filename": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "method": "POST"
+              }
+            }
+          },
+          "contentVersion": "1.0.0.0",
+          "outputs": {}
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Web/connections",
+      "apiVersion": "2016-06-01",
+      "location": "[parameters('logicAppLocation')]",
+      "name": "office365",
+      "properties": {
+        "api": {
+          "id": "[concat(subscription().id,'/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/office365')]"
+        },
+        "displayName": "office365_connection1",
+        "parameterValues": {}
+      }
+    },
+    {
+      "type": "Microsoft.Web/connections",
+      "apiVersion": "2016-06-01",
+      "location": "[parameters('logicAppLocation')]",
+      "name": "dynamicsax",
+      "properties": {
+        "api": {
+          "id": "[concat(subscription().id,'/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/dynamicsax')]"
+        },
+        "displayName": "D365 Finance&Operation_connection1",
+        "parameterValues": {}
+      }
+    }
+  ],
+  "outputs": {}
+}

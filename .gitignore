@@ -1,0 +1,11 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/AXenqueue/.vs
+/D365_ImportDataPackageAPI/.vs
+/D365_ImportDataPackageAPI/D365_ImportDataPackageAPI/bin/Debug/staging/D365_ImportDataPackageAPI
+/D365_ImportDataPackageAPI/D365_ImportDataPackageAPI/obj/Debug
+/ZipFileFunction/.vs/ZipFileFunction
+/ZipFileFunction/ZipFileFunction/Properties/PublishProfiles
+/ZipFileFunction/ZipFileFunction/.gitignore
