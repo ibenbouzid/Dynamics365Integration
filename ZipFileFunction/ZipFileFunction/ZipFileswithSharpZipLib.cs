@@ -18,9 +18,9 @@ using Newtonsoft.Json;
 
 namespace ZipFileFunction
 {
-    public static class Function
+    public static class ZipFileswithSharpZipLib
     {
-        [FunctionName("Function2")]
+        [FunctionName("ZipFileswithSharpZipLib")]
         public static async Task<HttpResponseMessage> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)]HttpRequestMessage req, TraceWriter log)
         {
             log.Info("C# HTTP trigger function processed a request.");
