@@ -3,7 +3,7 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "logicAppName": {
-      "value": "pakageapitest"
+      "value": "D365ImportPackage-Dev"
     },
     "Policy_retry_count": {
       "value": 10

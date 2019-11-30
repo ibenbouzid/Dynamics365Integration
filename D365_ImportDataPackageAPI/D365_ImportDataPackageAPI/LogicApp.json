@@ -38,7 +38,11 @@
         "uksouth",
         "ukwest",
         "westcentralus",
-        "westus2"
+        "westus2",
+        "koreacentral",
+        "koreasouth",
+        "francecentral",
+        "francesouth"
       ],
       "metadata": {
         "description": "Location of the Logic App."
@@ -68,16 +72,17 @@
         "displayName": "LogicApp"
       },
       "dependsOn": [
+        "[resourceId('Microsoft.Web/connections', 'dynamicsax')]",
         "[resourceId('Microsoft.Web/connections', 'office365')]"
       ],
       "properties": {
         "parameters": {
           "$connections": {
             "value": {
-              "dynamicsax_1": {
+              "dynamicsax": {
                 "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'dynamicsax')]",
-                "connectionId": "/subscriptions/fb40671f-c2d5-40a5-ae34-ae655ba58cc7/resourceGroups/azured365labs/providers/Microsoft.Web/connections/dynamicsax-2",
-                "connectionName": "dynamicsax-2"
+                "connectionId": "[resourceId('Microsoft.Web/connections', 'dynamicsax')]",
+                "connectionName": "dynamicsax"
               },
               "office365": {
                 "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'office365')]",
@@ -113,14 +118,14 @@
                   "inputs": {
                     "host": {
                       "connection": {
-                        "name": "@parameters('$connections')['dynamicsax_1']['connectionId']"
+                        "name": "@parameters('$connections')['dynamicsax']['connectionId']"
                       }
                     },
                     "method": "post",
                     "body": {
                       "executionId": "@body('ImportFromPackage')?['OutputParameters']?['value']"
                     },
-                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent('uctechdev310ddcbc8ffa04343devaos.cloudax.dynamics.com'))}/procedures/@{encodeURIComponent(encodeURIComponent('DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetExecutionSummaryStatus'))}"
+                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent('palexpo-dev1devaos.sandbox.ax.dynamics.com'))}/procedures/@{encodeURIComponent(encodeURIComponent('DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetExecutionSummaryStatus'))}"
                   },
                   "runAfter": {
                     "Delay": [
@@ -231,7 +236,7 @@
                   "inputs": {
                     "host": {
                       "connection": {
-                        "name": "@parameters('$connections')['dynamicsax_1']['connectionId']"
+                        "name": "@parameters('$connections')['dynamicsax']['connectionId']"
                       }
                     },
                     "method": "post",
@@ -242,7 +247,7 @@
                       "overwrite": true,
                       "legalEntityId": "@triggerBody()?['company']"
                     },
-                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent('uctechdev310ddcbc8ffa04343devaos.cloudax.dynamics.com'))}/procedures/@{encodeURIComponent(encodeURIComponent('DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.ImportFromPackage'))}"
+                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent('palexpo-dev1devaos.sandbox.ax.dynamics.com'))}/procedures/@{encodeURIComponent(encodeURIComponent('DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.ImportFromPackage'))}"
                   },
                   "runAfter": {}
                 }
@@ -266,14 +271,14 @@
                   "inputs": {
                     "host": {
                       "connection": {
-                        "name": "@parameters('$connections')['dynamicsax_1']['connectionId']"
+                        "name": "@parameters('$connections')['dynamicsax']['connectionId']"
                       }
                     },
                     "method": "post",
                     "body": {
                       "uniqueFileName": "@{triggerBody()?['filename']}_@{outputs('GetBlobPackage')['headers']['x-ms-request-id']}.zip"
                     },
-                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent('uctechdev310ddcbc8ffa04343devaos.cloudax.dynamics.com'))}/procedures/@{encodeURIComponent(encodeURIComponent('DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetAzureWriteUrl'))}"
+                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent('palexpo-dev1devaos.sandbox.ax.dynamics.com'))}/procedures/@{encodeURIComponent(encodeURIComponent('DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetAzureWriteUrl'))}"
                   },
                   "runAfter": {}
                 }
