@@ -128,7 +128,7 @@
                     "body": {
                       "executionId": "@body('ImportFromPackage')?['OutputParameters']?['value']"
                     },
-                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent('palexpo-dev1devaos.sandbox.ax.dynamics.com'))}/procedures/@{encodeURIComponent(encodeURIComponent('DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetExecutionSummaryStatus'))}"
+                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent(parameters('dynamicsax_instance')))}/procedures/@{encodeURIComponent(encodeURIComponent('DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetExecutionSummaryStatus'))}"
                   },
                   "runAfter": {
                     "Delay": [
@@ -206,12 +206,12 @@
                       "type": "Scope",
                       "actions": {
                         "HTTP": {
+                          "type": "Http",
                           "inputs": {
                             "method": "DELETE",
                             "uri": "@triggerBody()?['bloburl']"
                           },
-                          "runAfter": {},
-                          "type": "Http"
+                          "runAfter": {}
                         }
                       },
                       "runAfter": {}
@@ -278,7 +278,7 @@
                       "overwrite": true,
                       "legalEntityId": "@triggerBody()?['company']"
                     },
-                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent('palexpo-dev1devaos.sandbox.ax.dynamics.com'))}/procedures/@{encodeURIComponent(encodeURIComponent('DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.ImportFromPackage'))}"
+                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent(parameters('dynamicsax_instance')))}/procedures/@{encodeURIComponent(encodeURIComponent('DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.ImportFromPackage'))}"
                   },
                   "runAfter": {}
                 }
@@ -309,7 +309,7 @@
                     "body": {
                       "uniqueFileName": "@{triggerBody()?['filename']}_@{outputs('GetBlobPackage')['headers']['x-ms-request-id']}.zip"
                     },
-                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent('palexpo-dev1devaos.sandbox.ax.dynamics.com'))}/procedures/@{encodeURIComponent(encodeURIComponent('DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetAzureWriteUrl'))}"
+                    "path": "/datasets/@{encodeURIComponent(encodeURIComponent(parameters('dynamicsax_instance')))}/procedures/@{encodeURIComponent(encodeURIComponent('DataManagementDefinitionGroups/Microsoft.Dynamics.DataEntities.GetAzureWriteUrl'))}"
                   },
                   "runAfter": {}
                 }
