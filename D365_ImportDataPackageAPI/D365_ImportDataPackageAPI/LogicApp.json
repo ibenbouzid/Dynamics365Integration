@@ -42,7 +42,10 @@
         "koreacentral",
         "koreasouth",
         "francecentral",
-        "francesouth"
+        "francesouth",
+        "uaecentral",
+        "southafricanorth",
+        "southafricawest"
       ],
       "metadata": {
         "description": "Location of the Logic App."
@@ -201,7 +204,16 @@
                   "actions": {
                     "Handle_success": {
                       "type": "Scope",
-                      "actions": {},
+                      "actions": {
+                        "HTTP": {
+                          "inputs": {
+                            "method": "DELETE",
+                            "uri": "@triggerBody()?['bloburl']"
+                          },
+                          "runAfter": {},
+                          "type": "Http"
+                        }
+                      },
                       "runAfter": {}
                     }
                   },
@@ -210,7 +222,26 @@
                     "actions": {
                       "Handle_error": {
                         "type": "Scope",
-                        "actions": {},
+                        "actions": {
+                          "Send_an_email_(V2)": {
+                            "inputs": {
+                              "body": {
+                                "Body": "<p>Exception has occurred while uploading file @{triggerBody()?['filename']} into Dynamics 365 Finances</p>",
+                                "Subject": "Exception has occurred while uploading file @{triggerBody()?['filename']}",
+                                "To": "@parameters('exception_email_id')"
+                              },
+                              "host": {
+                                "connection": {
+                                  "name": "@parameters('$connections')['office365']['connectionId']"
+                                }
+                              },
+                              "method": "post",
+                              "path": "/v2/Mail"
+                            },
+                            "runAfter": {},
+                            "type": "ApiConnection"
+                          }
+                        },
                         "runAfter": {}
                       }
                     }
@@ -242,7 +273,7 @@
                     "method": "post",
                     "body": {
                       "packageUrl": "@{json(body('GetAzureWritableUrl')?['value']).BlobUrl}",
-                      "definitionGroupId": "RimiliaImport",
+                      "definitionGroupId": "@triggerBody()?['DMFprojectname']",
                       "execute": true,
                       "overwrite": true,
                       "legalEntityId": "@triggerBody()?['company']"
@@ -334,6 +365,9 @@
               "inputs": {
                 "schema": {
                   "properties": {
+                    "DMFprojectname": {
+                      "type": "string"
+                    },
                     "bloburl": {
                       "type": "string"
                     },
